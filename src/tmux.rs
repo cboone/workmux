@@ -1547,8 +1547,15 @@ fn inject_status_format(format: &str) -> String {
         let (before, after) = format.split_at(pos);
         format!("{}{}{}", before, WORKMUX_STATUS_FORMAT, after)
     } else {
-        // Append to end
-        format!("{}{}", format, WORKMUX_STATUS_FORMAT)
+        // Append to end, but insert before trailing whitespace to avoid double-spacing
+        // (the status format has a leading space, so appending after trailing whitespace
+        // would result in two spaces)
+        let trimmed_end = format.trim_end();
+        let trailing_whitespace = &format[trimmed_end.len()..];
+        format!(
+            "{}{}{}",
+            trimmed_end, WORKMUX_STATUS_FORMAT, trailing_whitespace
+        )
     }
 }
 
@@ -1806,6 +1813,15 @@ mod tests {
         let input = "#I:#W";
         let result = inject_status_format(input);
         assert_eq!(result, "#I:#W#{?@workmux_status, #{@workmux_status},}");
+    }
+
+    #[test]
+    fn test_inject_status_format_no_flags_with_trailing_space() {
+        // Format without window_flags but with trailing whitespace - insert before
+        // trailing whitespace to avoid double-spacing (status format has leading space)
+        let input = "#I:#W ";
+        let result = inject_status_format(input);
+        assert_eq!(result, "#I:#W#{?@workmux_status, #{@workmux_status},} ");
     }
 
     #[test]
